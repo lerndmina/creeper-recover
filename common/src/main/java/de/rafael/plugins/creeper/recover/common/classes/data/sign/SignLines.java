@@ -46,10 +46,19 @@ import org.bukkit.block.sign.Side;
 public record SignLines(Side side, String[] lines) implements IBlockData {
 
     @Override
+    @SuppressWarnings("deprecation")
     public void apply(Block block, RecoverPhase phase) {
-        if(phase == RecoverPhase.POST_STATE_UPDATE && block.getState() instanceof Sign sign) {
-            for (int i = 0; i < lines.length; i++) {
-                sign.getSide(side).setLine(i, lines[i]);
+        if (phase == RecoverPhase.POST_STATE_UPDATE && block.getState() instanceof Sign sign) {
+            if (side == null) {
+                // 1.19.4 compatible mode - use deprecated methods
+                for (int i = 0; i < lines.length; i++) {
+                    sign.setLine(i, lines[i]);
+                }
+            } else {
+                // 1.20+ mode - use side-based API
+                for (int i = 0; i < lines.length; i++) {
+                    sign.getSide(side).setLine(i, lines[i]);
+                }
             }
             sign.update(true, false);
         }

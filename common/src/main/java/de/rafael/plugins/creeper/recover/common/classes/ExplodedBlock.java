@@ -88,6 +88,12 @@ public class ExplodedBlock {
     public void recoverBasics() {
         CreeperPlugin.instance().explosionManager().freeBlock(this.location);
         Block block = this.location.getBlock();
+
+        CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                "Recovering block: %s at %s",
+                this.material.name(),
+                this.location.toString()));
+
         block.setType(this.material, false);
         block.setBlockData(this.data, false);
 
@@ -102,7 +108,8 @@ public class ExplodedBlock {
         }
 
         CreeperPlugin.instance().pluginStats().blockRecovered();
-        block.getWorld().playSound(block.getLocation(), CreeperPlugin.instance().configManager().blockRecoverSound(), 0.5f, 1f);
+        block.getWorld().playSound(block.getLocation(), CreeperPlugin.instance().configManager().blockRecoverSound(),
+                0.5f, 1f);
     }
 
 }

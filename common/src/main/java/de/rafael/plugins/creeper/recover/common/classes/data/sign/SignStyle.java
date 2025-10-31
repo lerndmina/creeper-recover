@@ -48,11 +48,19 @@ import org.bukkit.block.sign.SignSide;
 public record SignStyle(Side side, DyeColor dyeColor, boolean glowing) implements IBlockData {
 
     @Override
+    @SuppressWarnings("deprecation")
     public void apply(Block block, RecoverPhase phase) {
         if (phase == RecoverPhase.POST_STATE_UPDATE && block.getState() instanceof Sign sign) {
-            SignSide signSide = sign.getSide(side);
-            signSide.setColor(dyeColor);
-            signSide.setGlowingText(glowing);
+            if (side == null) {
+                // 1.19.4 compatible mode - use deprecated methods
+                sign.setColor(dyeColor);
+                sign.setGlowingText(glowing);
+            } else {
+                // 1.20+ mode - use side-based API
+                SignSide signSide = sign.getSide(side);
+                signSide.setColor(dyeColor);
+                signSide.setGlowingText(glowing);
+            }
             sign.update(true, false);
         }
     }

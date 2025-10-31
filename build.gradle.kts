@@ -33,4 +33,11 @@ allprojects {
     version = findProperty("plugin_version")!!
     group = findProperty("maven_group")!!
 
+    apply(plugin = "java")
+    
+    configure<JavaPluginExtension> {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
 }

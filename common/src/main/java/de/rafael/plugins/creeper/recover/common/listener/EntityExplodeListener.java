@@ -51,19 +51,65 @@ public class EntityExplodeListener implements Listener {
 
     @EventHandler
     public void on(EntityExplodeEvent event) {
-        if (!CreeperPlugin.instance().configManager().enabled()) return;
+        if (!CreeperPlugin.instance().configManager().enabled())
+            return;
 
         if (CreeperPlugin.instance().configManager().usePlugin(event)) {
             var blocks = new BlockList(event.blockList());
 
+            CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                    "Explosion detected: Entity=%s, Location=[%s], Blocks=%d",
+                    event.getEntityType().name(),
+                    event.getLocation().toString(),
+                    blocks.blocks().size()));
+
             // Disable damage by explosion
             event.setYield(100);
-            blocks.removeIf(block -> CreeperPlugin.instance().configManager().blockBlacklist().contains(block.getType()));
+            int originalBlockCount = blocks.blocks().size();
+
+            // Remove protected blocks from explosion entirely - they should never be
+            // destroyed
+            int protectedRemoved = 0;
+            var iterator = event.blockList().iterator();
+            while (iterator.hasNext()) {
+                var block = iterator.next();
+                if (CreeperPlugin.instance().configManager().isProtectedBlock(block.getType())) {
+                    iterator.remove();
+                    protectedRemoved++;
+                }
+            }
+
+            if (protectedRemoved > 0) {
+                CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                        "Protected %d blocks from explosion destruction", protectedRemoved));
+            }
+
+            // Refresh blocks list after protected block removal
+            blocks = new BlockList(event.blockList());
+
+            // Remove blacklisted blocks from recovery (they get destroyed but won't be
+            // restored)
+            blocks.removeIf(
+                    block -> CreeperPlugin.instance().configManager().blockBlacklist().contains(block.getType()));
+            int filteredBlockCount = blocks.blocks().size();
+
+            if (originalBlockCount != (filteredBlockCount + protectedRemoved)) {
+                int blacklistedRemoved = originalBlockCount - filteredBlockCount - protectedRemoved;
+                CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                        "Filtered %d blacklisted blocks, %d blocks remaining for recovery",
+                        blacklistedRemoved,
+                        filteredBlockCount));
+            }
 
             // Store blocks
             CreeperPlugin.instance().explosionManager().handle(new Explosion(event.getLocation().clone(), blocks));
 
-            // Remove all blocks without collision. To prevent redstone and other blocks from being without support blocks.
+            CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                    "Started recovery process for %d blocks",
+                    filteredBlockCount));
+
+            // Remove all blocks without collision. To prevent redstone and other blocks
+            // from being without support blocks.
             blocks.stream().filter(Block::isPassable).forEach(block -> block.setType(Material.AIR, false));
             // Remove the rest of the blocks
             blocks.stream().filter(block -> !block.isPassable()).forEach(block -> block.setType(Material.AIR, false));

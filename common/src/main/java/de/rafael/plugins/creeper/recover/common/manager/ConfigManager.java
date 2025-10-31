@@ -68,16 +68,23 @@ public class ConfigManager {
 
     private Sound blockRecoverSound;
     private List<Material> blockBlacklist;
+    private List<Material> protectedBlocks;
 
     private boolean enabled = true;
     private boolean bStats = true;
     private boolean ignoreUpdates = false;
+    private boolean debugEnabled = false;
 
     private List<JsonObject> targetList;
 
     public boolean load() {
 
         this.blockBlacklist = new ArrayList<>();
+        this.protectedBlocks = new ArrayList<>();
+
+        // Default protected blocks - player heads lose their skin when restored
+        this.protectedBlocks.add(Material.PLAYER_HEAD);
+        this.protectedBlocks.add(Material.PLAYER_WALL_HEAD);
 
         try {
             this.blockRecoverSound = Sound.valueOf("BLOCK_ROOTED_DIRT_PLACE");
@@ -85,7 +92,8 @@ public class ConfigManager {
             this.blockRecoverSound = Sound.BLOCK_GRAVEL_PLACE;
         }
 
-        JsonConfiguration jsonConfiguration = JsonConfiguration.loadConfig(new File("plugins//CreeperRecover/"), "config.json");
+        JsonConfiguration jsonConfiguration = JsonConfiguration.loadConfig(new File("plugins//CreeperRecover/"),
+                "config.json");
 
         // Config Version
         if (!jsonConfiguration.jsonObject().has("configVersion")) {
@@ -131,7 +139,17 @@ public class ConfigManager {
 
             return false;
         } else {
-            this.ignoreUpdates = jsonConfiguration.jsonObject().getAsJsonObject("plugin").get("ignoreUpdates").getAsBoolean();
+            this.ignoreUpdates = jsonConfiguration.jsonObject().getAsJsonObject("plugin").get("ignoreUpdates")
+                    .getAsBoolean();
+        }
+        if (!jsonConfiguration.jsonObject().getAsJsonObject("plugin").has("debugEnabled")) {
+            jsonConfiguration.jsonObject().getAsJsonObject("plugin").addProperty("debugEnabled", this.debugEnabled);
+            jsonConfiguration.saveConfig();
+
+            return false;
+        } else {
+            this.debugEnabled = jsonConfiguration.jsonObject().getAsJsonObject("plugin").get("debugEnabled")
+                    .getAsBoolean();
         }
 
         // Recover
@@ -141,7 +159,8 @@ public class ConfigManager {
 
             return false;
         } else {
-            this.recoverSpeed = jsonConfiguration.jsonObject().getAsJsonObject("recover").get("recoverSpeed").getAsInt();
+            this.recoverSpeed = jsonConfiguration.jsonObject().getAsJsonObject("recover").get("recoverSpeed")
+                    .getAsInt();
         }
         if (!jsonConfiguration.jsonObject().getAsJsonObject("recover").has("recoverDelay")) {
             jsonConfiguration.jsonObject().getAsJsonObject("recover").addProperty("recoverDelay", this.recoverDelay);
@@ -149,25 +168,44 @@ public class ConfigManager {
 
             return false;
         } else {
-            this.recoverDelay = jsonConfiguration.jsonObject().getAsJsonObject("recover").get("recoverDelay").getAsInt();
+            this.recoverDelay = jsonConfiguration.jsonObject().getAsJsonObject("recover").get("recoverDelay")
+                    .getAsInt();
         }
         if (!jsonConfiguration.jsonObject().getAsJsonObject("recover").has("blockRecoverSound")) {
-            jsonConfiguration.jsonObject().getAsJsonObject("recover").addProperty("blockRecoverSound", this.blockRecoverSound.name());
+            jsonConfiguration.jsonObject().getAsJsonObject("recover").addProperty("blockRecoverSound",
+                    this.blockRecoverSound.name());
             jsonConfiguration.saveConfig();
 
             return false;
         } else {
-            this.blockRecoverSound = Sound.valueOf(jsonConfiguration.jsonObject().getAsJsonObject("recover").get("blockRecoverSound").getAsString());
+            this.blockRecoverSound = Sound.valueOf(
+                    jsonConfiguration.jsonObject().getAsJsonObject("recover").get("blockRecoverSound").getAsString());
         }
         if (!jsonConfiguration.jsonObject().getAsJsonObject("recover").has("blockBlacklist")) {
-            jsonConfiguration.jsonObject().getAsJsonObject("recover").add("blockBlacklist", GSON.toJsonTree(this.blockBlacklist, new TypeToken<List<Material>>() {
-            }.getType()));
+            jsonConfiguration.jsonObject().getAsJsonObject("recover").add("blockBlacklist",
+                    GSON.toJsonTree(this.blockBlacklist, new TypeToken<List<Material>>() {
+                    }.getType()));
             jsonConfiguration.saveConfig();
 
             return false;
         } else {
-            this.blockBlacklist = GSON.fromJson(jsonConfiguration.jsonObject().getAsJsonObject("recover").getAsJsonArray("blockBlacklist"), new TypeToken<List<Material>>() {
-            }.getType());
+            this.blockBlacklist = GSON.fromJson(
+                    jsonConfiguration.jsonObject().getAsJsonObject("recover").getAsJsonArray("blockBlacklist"),
+                    new TypeToken<List<Material>>() {
+                    }.getType());
+        }
+        if (!jsonConfiguration.jsonObject().getAsJsonObject("recover").has("protectedBlocks")) {
+            jsonConfiguration.jsonObject().getAsJsonObject("recover").add("protectedBlocks",
+                    GSON.toJsonTree(this.protectedBlocks, new TypeToken<List<Material>>() {
+                    }.getType()));
+            jsonConfiguration.saveConfig();
+
+            return false;
+        } else {
+            this.protectedBlocks = GSON.fromJson(
+                    jsonConfiguration.jsonObject().getAsJsonObject("recover").getAsJsonArray("protectedBlocks"),
+                    new TypeToken<List<Material>>() {
+                    }.getType());
         }
 
         // Target
@@ -191,7 +229,7 @@ public class ConfigManager {
 
                 JsonArray entityTypes = new JsonArray();
                 entityTypes.add(EntityType.CREEPER.name());
-                entityTypes.add(EntityType.TNT.name());
+                entityTypes.add("TNT");
 
                 entityTarget.add("entityTypes", entityTypes);
                 jsonArray.add(entityTarget);
@@ -234,18 +272,23 @@ public class ConfigManager {
         boolean usePlugin = true;
 
         // World
-        List<JsonObject> worldTargets = this.targetList.stream().filter(item -> item.get("type").getAsString().equals(TargetTypes.WORLD.name())).toList();
+        List<JsonObject> worldTargets = this.targetList.stream()
+                .filter(item -> item.get("type").getAsString().equals(TargetTypes.WORLD.name())).toList();
         for (JsonObject worldTarget : worldTargets) {
-            if(!worldTarget.get("ignore").getAsBoolean()) {
-                if(worldTarget.has("whitelist")) {
+            if (!worldTarget.get("ignore").getAsBoolean()) {
+                if (worldTarget.has("whitelist")) {
                     JsonArray whiteList = worldTarget.getAsJsonArray("whitelist");
-                    if(whiteList.size() > 0 && whiteList.asList().stream().map(JsonElement::getAsString).noneMatch(s -> Objects.requireNonNull(event.getLocation().getWorld()).getName().equalsIgnoreCase(s))) {
+                    if (whiteList.size() > 0
+                            && whiteList.asList().stream().map(JsonElement::getAsString).noneMatch(s -> Objects
+                                    .requireNonNull(event.getLocation().getWorld()).getName().equalsIgnoreCase(s))) {
                         usePlugin = false;
                     }
                 }
-                if(worldTarget.has("blacklist")) {
+                if (worldTarget.has("blacklist")) {
                     JsonArray blacklist = worldTarget.getAsJsonArray("blacklist");
-                    if(blacklist.size() > 0 && blacklist.asList().stream().map(JsonElement::getAsString).anyMatch(s -> Objects.requireNonNull(event.getLocation().getWorld()).getName().equalsIgnoreCase(s))) {
+                    if (blacklist.size() > 0
+                            && blacklist.asList().stream().map(JsonElement::getAsString).anyMatch(s -> Objects
+                                    .requireNonNull(event.getLocation().getWorld()).getName().equalsIgnoreCase(s))) {
                         usePlugin = false;
                     }
                 }
@@ -253,24 +296,26 @@ public class ConfigManager {
         }
 
         // Entity
-        List<JsonObject> entityTargets = this.targetList.stream().filter(item -> item.get("type").getAsString().equals(TargetTypes.ENTITY.name())).toList();
+        List<JsonObject> entityTargets = this.targetList.stream()
+                .filter(item -> item.get("type").getAsString().equals(TargetTypes.ENTITY.name())).toList();
         for (JsonObject entityTarget : entityTargets) {
-            if(!entityTarget.get("ignore").getAsBoolean()) {
+            if (!entityTarget.get("ignore").getAsBoolean()) {
                 List<EntityType> entityTypes = new ArrayList<>();
                 for (JsonElement types : entityTarget.get("entityTypes").getAsJsonArray()) {
                     entityTypes.add(EntityType.valueOf(types.getAsString()));
                 }
 
-                if(!entityTypes.contains(event.getEntity().getType())) {
+                if (!entityTypes.contains(event.getEntity().getType())) {
                     usePlugin = false;
                 }
             }
         }
 
         // Height Range
-        List<JsonObject> rangeHeightTargets = this.targetList.stream().filter(item -> item.get("type").getAsString().equals(TargetTypes.HEIGHT_RANGE.name())).toList();
+        List<JsonObject> rangeHeightTargets = this.targetList.stream()
+                .filter(item -> item.get("type").getAsString().equals(TargetTypes.HEIGHT_RANGE.name())).toList();
         for (JsonObject rangeHeightTarget : rangeHeightTargets) {
-            if(!rangeHeightTarget.get("ignore").getAsBoolean()) {
+            if (!rangeHeightTarget.get("ignore").getAsBoolean()) {
                 Location location = event.getLocation().clone();
 
                 int from = rangeHeightTarget.get("from").getAsInt();
@@ -283,13 +328,14 @@ public class ConfigManager {
         }
 
         // Height Fixed
-        List<JsonObject> fixedHeightTargets = this.targetList.stream().filter(item -> item.get("type").getAsString().equals(TargetTypes.HEIGHT_FIXED.name())).toList();
+        List<JsonObject> fixedHeightTargets = this.targetList.stream()
+                .filter(item -> item.get("type").getAsString().equals(TargetTypes.HEIGHT_FIXED.name())).toList();
         for (JsonObject fixedHeightTarget : fixedHeightTargets) {
-            if(!fixedHeightTarget.get("ignore").getAsBoolean()) {
+            if (!fixedHeightTarget.get("ignore").getAsBoolean()) {
                 Location location = event.getLocation().clone();
 
                 int fixed = fixedHeightTarget.get("fixed").getAsInt();
-                if (((int)location.getY()) == fixed) {
+                if (((int) location.getY()) == fixed) {
                     continue;
                 }
                 usePlugin = false;
@@ -305,7 +351,7 @@ public class ConfigManager {
 
         boolean success = false;
 
-        if(from == -1 && to == 1) {
+        if (from == -1 && to == 1) {
             JsonConfiguration jsonConfiguration = JsonConfiguration.loadConfig(configFolder, configFileName);
 
             JsonElement recoverSpeed = jsonConfiguration.jsonObject().get("recoverSpeed");
@@ -334,16 +380,16 @@ public class ConfigManager {
 
             jsonConfiguration.saveConfig();
             success = true;
-        } else if(from == 1 && to == 2) {
+        } else if (from == 1 && to == 2) {
             JsonConfiguration jsonConfiguration = JsonConfiguration.loadConfig(configFolder, configFileName);
             jsonConfiguration.jsonObject().addProperty("configVersion", to);
 
             JsonArray targets = jsonConfiguration.jsonObject().getAsJsonArray("target");
             targets.forEach(jsonElement -> {
                 JsonObject target = jsonElement.getAsJsonObject();
-                if(target.get("type").getAsString().equalsIgnoreCase(TargetTypes.ENTITY.name())) {
-                    if(target.has("all")) {
-                        if(target.get("all").getAsBoolean()) {
+                if (target.get("type").getAsString().equalsIgnoreCase(TargetTypes.ENTITY.name())) {
+                    if (target.has("all")) {
+                        if (target.get("all").getAsBoolean()) {
                             target.addProperty("ignore", true);
                         }
                         target.remove("all");
@@ -355,10 +401,110 @@ public class ConfigManager {
             success = true;
         }
 
-        if(success) {
-            Bukkit.getConsoleSender().sendMessage(CreeperPlugin.instance().messageManager().getMessage(MessageManager.Message.PREFIX) + "§7Config updated from version §b" + from + " §7to §3" + to + "§8.");
+        if (success) {
+            Bukkit.getConsoleSender()
+                    .sendMessage(CreeperPlugin.instance().messageManager().getMessage(MessageManager.Message.PREFIX)
+                            + "§7Config updated from version §b" + from + " §7to §3" + to + "§8.");
         }
 
+    }
+
+    /**
+     * Sends a debug message to all online operators if debug is enabled
+     * 
+     * @param message The debug message to send
+     */
+    public void sendDebugMessage(String message) {
+        if (!debugEnabled)
+            return;
+
+        String formattedMessage = CreeperPlugin.instance().messageManager().getMessage(MessageManager.Message.PREFIX)
+                + "§e[DEBUG] §7" + message;
+
+        // Send to console
+        Bukkit.getConsoleSender().sendMessage(formattedMessage);
+
+        // Send to all online operators
+        Bukkit.getOnlinePlayers().stream()
+                .filter(player -> player.isOp() || player.hasPermission("creeperrecover.debug"))
+                .forEach(player -> player.sendMessage(formattedMessage));
+    }
+
+    /**
+     * Sets the debug enabled status
+     * 
+     * @param enabled Whether debug should be enabled
+     */
+    public void setDebugEnabled(boolean enabled) {
+        this.debugEnabled = enabled;
+    }
+
+    /**
+     * Saves the current configuration to the config file
+     */
+    public void saveConfig() {
+        JsonConfiguration jsonConfiguration = JsonConfiguration.loadConfig(new File("plugins//CreeperRecover/"),
+                "config.json");
+
+        // Update the debugEnabled value in the config
+        if (!jsonConfiguration.jsonObject().has("plugin")) {
+            jsonConfiguration.jsonObject().add("plugin", new JsonObject());
+        }
+        jsonConfiguration.jsonObject().getAsJsonObject("plugin").addProperty("debugEnabled", this.debugEnabled);
+
+        // Update protected blocks in the config
+        if (!jsonConfiguration.jsonObject().has("recover")) {
+            jsonConfiguration.jsonObject().add("recover", new JsonObject());
+        }
+        jsonConfiguration.jsonObject().getAsJsonObject("recover").add("protectedBlocks",
+                GSON.toJsonTree(this.protectedBlocks, new TypeToken<List<Material>>() {
+                }.getType()));
+
+        // Save the config
+        jsonConfiguration.saveConfig();
+    }
+
+    /**
+     * Checks if a material is in the protected blocks list
+     * 
+     * @param material The material to check
+     * @return true if the material is protected
+     */
+    public boolean isProtectedBlock(Material material) {
+        return this.protectedBlocks.contains(material);
+    }
+
+    /**
+     * Adds a material to the protected blocks list
+     * 
+     * @param material The material to add
+     * @return true if the material was added, false if it was already in the list
+     */
+    public boolean addProtectedBlock(Material material) {
+        if (!this.protectedBlocks.contains(material)) {
+            this.protectedBlocks.add(material);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Removes a material from the protected blocks list
+     * 
+     * @param material The material to remove
+     * @return true if the material was removed, false if it wasn't in the list
+     */
+    public boolean removeProtectedBlock(Material material) {
+        return this.protectedBlocks.remove(material);
+    }
+
+    /**
+     * Gets a copy of the protected blocks list
+     * 
+     * @return A copy of the protected blocks list
+     */
+    public List<Material> getProtectedBlocks() {
+        return new ArrayList<>(this.protectedBlocks);
     }
 
 }

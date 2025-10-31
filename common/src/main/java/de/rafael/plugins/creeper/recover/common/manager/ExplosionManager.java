@@ -60,8 +60,10 @@ public class ExplosionManager {
         List<Explosion> explosions = Collections.singletonList(explosion);
         CreeperPlugin.scheduler().runAsyncAtFixedRate(cancel -> {
             recoverBlocks(explosions, false, 1);
-            if (explosion.isFinished()) cancel.run();
-        }, CreeperPlugin.instance().configManager().recoverDelay(), CreeperPlugin.instance().configManager().recoverSpeed(), TimeUnit.MILLISECONDS);
+            if (explosion.isFinished())
+                cancel.run();
+        }, CreeperPlugin.instance().configManager().recoverDelay(),
+                CreeperPlugin.instance().configManager().recoverSpeed(), TimeUnit.MILLISECONDS);
     }
 
     public int recoverBlocks(int amount) {
@@ -74,8 +76,22 @@ public class ExplosionManager {
             int recovered = 0;
             while (recovered < amount && iterator.hasNext()) {
                 Explosion explosion = iterator.next();
-                recovered += explosion.recoverBlocks(amount);
-                if (removeFinished && explosion.isFinished()) iterator.remove();
+                int blocksRecovered = explosion.recoverBlocks(amount);
+                recovered += blocksRecovered;
+
+                if (blocksRecovered > 0) {
+                    CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                            "Recovered %d blocks from explosion at %s",
+                            blocksRecovered,
+                            explosion.location().toString()));
+                }
+
+                if (removeFinished && explosion.isFinished()) {
+                    iterator.remove();
+                    CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                            "Explosion at %s completed recovery",
+                            explosion.location().toString()));
+                }
             }
             return recovered;
         } else {

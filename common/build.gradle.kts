@@ -33,6 +33,11 @@ plugins {
     id("com.gradleup.shadow") version "9.0.0-beta4"
 }
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
 repositories {
     mavenCentral()
 
@@ -63,8 +68,10 @@ tasks {
     }
     compileJava {
         options.encoding = "UTF-8"
+        options.release.set(17)
     }
     compileTestJava {
         options.encoding = "UTF-8"
+        options.release.set(17)
     }
 }

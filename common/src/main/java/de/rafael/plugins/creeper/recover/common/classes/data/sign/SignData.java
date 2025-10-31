@@ -44,8 +44,14 @@ public record SignData(boolean waxed) implements IBlockData {
     @Override
     public void apply(Block block, RecoverPhase phase) {
         if (phase == RecoverPhase.POST_STATE_UPDATE && block.getState() instanceof Sign sign) {
-            sign.setWaxed(waxed);
-            sign.update(true, false);
+            // Sign waxing not supported in 1.19.4 - this is a no-op for compatibility
+            try {
+                // Try to call setWaxed if available (1.20+)
+                sign.getClass().getMethod("setWaxed", boolean.class).invoke(sign, waxed);
+                sign.update(true, false);
+            } catch (Exception ignored) {
+                // Method doesn't exist in 1.19.4, ignore silently
+            }
         }
     }
 

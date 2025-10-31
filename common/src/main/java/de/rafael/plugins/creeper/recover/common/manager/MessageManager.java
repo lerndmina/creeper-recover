@@ -47,7 +47,8 @@ public class MessageManager {
     public void load() {
         this.messages.clear();
 
-        JsonConfiguration jsonConfiguration = JsonConfiguration.loadConfig(new File("plugins//CreeperRecover/"), "messages.json");
+        JsonConfiguration jsonConfiguration = JsonConfiguration.loadConfig(new File("plugins//CreeperRecover/"),
+                "messages.json");
 
         for (Message message : Message.values()) {
             if (jsonConfiguration.jsonObject().has(message.getId())) {
@@ -63,7 +64,8 @@ public class MessageManager {
     }
 
     public String getMessage(Message message, Object... objects) {
-        return String.format(this.messages.getOrDefault(message, "§cFailed to load message§8[§b" + message.name() + "§8/§b" + message.getId() + "§8]"), objects);
+        return String.format(this.messages.getOrDefault(message,
+                "§cFailed to load message§8[§b" + message.name() + "§8/§b" + message.getId() + "§8]"), objects);
     }
 
     public enum Message {
@@ -77,7 +79,8 @@ public class MessageManager {
         STATS_LINE_EXPLOSIONS("stats.line.explosions", "   §bExplosions recovered §8» §7%d"),
         HELP_LINE_1("help.line.1", "§8/§7recover §bfix §8[§3blocks§8/§3all§8]"),
         HELP_LINE_2("help.line.2", "§8/§7recover §breload"),
-        HELP_LINE_3("help.line.3", "§8/§7recover §bstats");
+        HELP_LINE_3("help.line.3", "§8/§7recover §bstats"),
+        HELP_LINE_4("help.line.4", "§8/§7recover §bdebug");
 
         private final String id;
         private final String defaultMessage;

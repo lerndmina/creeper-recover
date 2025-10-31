@@ -40,7 +40,6 @@ package de.rafael.plugins.creeper.recover.common.classes;
 
 import de.rafael.plugins.creeper.recover.common.CreeperPlugin;
 import de.rafael.plugins.creeper.recover.common.classes.data.InventoryItems;
-import de.rafael.plugins.creeper.recover.common.classes.data.sign.SignData;
 import de.rafael.plugins.creeper.recover.common.classes.data.sign.SignLines;
 import de.rafael.plugins.creeper.recover.common.classes.data.sign.SignStyle;
 import de.rafael.plugins.creeper.recover.common.classes.list.BlockList;
@@ -51,8 +50,7 @@ import org.bukkit.Material;
 import org.bukkit.block.Chest;
 import org.bukkit.block.DoubleChest;
 import org.bukkit.block.Sign;
-import org.bukkit.block.sign.Side;
-import org.bukkit.block.sign.SignSide;
+
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.TNTPrimed;
 import org.bukkit.inventory.DoubleChestInventory;
@@ -74,12 +72,29 @@ public class Explosion {
         List<ExplodedBlock> explodedBlocks = new ArrayList<>();
         blocks.forEach((block, ignore, add) -> {
             if (block.getType() == Material.TNT) {
-                TNTPrimed tnt = (TNTPrimed) Objects.requireNonNull(block.getLocation().getWorld()).spawnEntity(MathUtils.toCenterLocation(block.getLocation()), EntityType.TNT);
+                // Try different TNT entity type names for version compatibility
+                EntityType tntType;
+                try {
+                    tntType = EntityType.valueOf("TNT");
+                } catch (IllegalArgumentException e) {
+                    try {
+                        tntType = EntityType.valueOf("PRIMED_TNT");
+                    } catch (IllegalArgumentException e2) {
+                        tntType = EntityType.valueOf("TNT_MINECART"); // Fallback
+                    }
+                }
+                TNTPrimed tnt = (TNTPrimed) Objects.requireNonNull(block.getLocation().getWorld())
+                        .spawnEntity(MathUtils.toCenterLocation(block.getLocation()), tntType);
                 tnt.setFuseTicks(MathUtils.generateRandomInteger(10, 30));
-                tnt.setVelocity(MathUtils.calculateVectorBetween2Locations(MathUtils.toCenterLocation(location.clone()), MathUtils.toCenterLocation(block.getLocation().clone())).normalize().multiply(0.7));
+                tnt.setVelocity(
+                        MathUtils
+                                .calculateVectorBetween2Locations(MathUtils.toCenterLocation(location.clone()),
+                                        MathUtils.toCenterLocation(block.getLocation().clone()))
+                                .normalize().multiply(0.7));
                 return;
             }
-            ExplodedBlock explodedBlock = new ExplodedBlock(block.getLocation().clone(), block.getType(), block.getBlockData().clone());
+            ExplodedBlock explodedBlock = new ExplodedBlock(block.getLocation().clone(), block.getType(),
+                    block.getBlockData().clone());
             if (block.getState() instanceof InventoryHolder holder) {
                 InventoryItems inventory = new InventoryItems();
                 for (int i = 0; i < holder.getInventory().getStorageContents().length; i++) {
@@ -101,27 +116,30 @@ public class Explosion {
                     if (block.equals(leftSide.getBlock())) {
                         add.accept(rightSide.getBlock());
                         ignore.accept(rightSide.getBlock());
-                        ExplodedBlock extraChest = new ExplodedBlock(rightSide.getBlock().getLocation().clone(), rightSide.getBlock().getType(), rightSide.getBlock().getBlockData().clone());
+                        ExplodedBlock extraChest = new ExplodedBlock(rightSide.getBlock().getLocation().clone(),
+                                rightSide.getBlock().getType(), rightSide.getBlock().getBlockData().clone());
                         explodedBlock.connectBlock(extraChest);
                     } else if (block.equals(rightSide.getBlock())) {
                         add.accept(leftSide.getBlock());
                         ignore.accept(leftSide.getBlock());
-                        ExplodedBlock extraChest = new ExplodedBlock(leftSide.getBlock().getLocation().clone(), leftSide.getBlock().getType(), leftSide.getBlock().getBlockData().clone());
+                        ExplodedBlock extraChest = new ExplodedBlock(leftSide.getBlock().getLocation().clone(),
+                                leftSide.getBlock().getType(), leftSide.getBlock().getBlockData().clone());
                         explodedBlock.connectBlock(extraChest);
                     }
                 }
             }
             if (block.getState() instanceof Sign sign) {
-                for (Side side : Side.values()) {
-                    SignSide signSide = sign.getSide(side);
-                    explodedBlock.addData(new SignLines(side, signSide.getLines()));
-                    explodedBlock.addData(new SignStyle(side, signSide.getColor(), signSide.isGlowingText()));
-                }
-                explodedBlock.addData(new SignData(sign.isWaxed()));
+                // 1.19.4 compatible sign handling (single-sided signs only)
+                explodedBlock.addData(new SignLines(null, sign.getLines()));
+                explodedBlock.addData(new SignStyle(null, sign.getColor(), sign.isGlowingText()));
+                // Note: Sign waxing not supported in 1.19.4
             }
             explodedBlocks.add(explodedBlock);
         });
-        this.blocks = explodedBlocks.stream().sorted(Comparator.comparingDouble(item -> ((ExplodedBlock) item).location().distance(location)).reversed()).collect(Collectors.toCollection(ArrayList::new));
+        this.blocks = explodedBlocks
+                .stream().sorted(Comparator
+                        .comparingDouble(item -> ((ExplodedBlock) item).location().distance(location)).reversed())
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public synchronized boolean recoverBlock() {

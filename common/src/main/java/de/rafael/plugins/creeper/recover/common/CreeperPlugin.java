@@ -88,42 +88,102 @@ public abstract class CreeperPlugin extends JavaPlugin {
         this.messageManager = new MessageManager();
         this.messageManager.load();
 
-        Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§7Loading §b" + getDescription().getName() + " §7version §3" + version.toString());
+        Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§7Loading §b"
+                + getDescription().getName() + " §7version §3" + version.toString());
 
-        this.configManager = new ConfigManager();
-        this.pluginStats = new PluginStats();
-        this.pluginStats.load();
+        Bukkit.getConsoleSender().sendMessage("§7[CreeperRecover] Initializing ConfigManager...");
+        try {
+            this.configManager = new ConfigManager();
+            Bukkit.getConsoleSender()
+                    .sendMessage("§7[CreeperRecover] ConfigManager created, initializing PluginStats...");
+        } catch (Exception e) {
+            Bukkit.getConsoleSender()
+                    .sendMessage("§c[CreeperRecover] Failed to create ConfigManager: " + e.getMessage());
+            e.printStackTrace();
+            return;
+        }
+
+        try {
+            this.pluginStats = new PluginStats();
+            this.pluginStats.load();
+            Bukkit.getConsoleSender().sendMessage("§7[CreeperRecover] PluginStats loaded, loading config...");
+        } catch (Exception e) {
+            Bukkit.getConsoleSender().sendMessage("§c[CreeperRecover] Failed to load PluginStats: " + e.getMessage());
+            e.printStackTrace();
+        }
 
         int amount = 0;
-        while (!configManager.load()) {
-            amount++;
+        boolean configLoaded = false;
+        try {
+            while (!configManager.load()) {
+                amount++;
+                Bukkit.getConsoleSender()
+                        .sendMessage("§7[CreeperRecover] Config load attempt " + amount + " failed, retrying...");
+                if (amount > 10) {
+                    Bukkit.getConsoleSender().sendMessage(
+                            "§c[CreeperRecover] Failed to load config after 10 attempts. Plugin may not function correctly.");
+                    break;
+                }
+            }
+            if (amount <= 10) {
+                configLoaded = true;
+                Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX)
+                        + "§7The config §aloaded §7in §b" + amount + " §7cycles§8.");
+            }
+        } catch (Exception e) {
+            Bukkit.getConsoleSender()
+                    .sendMessage("§c[CreeperRecover] Exception during config loading: " + e.getMessage());
+            e.printStackTrace();
         }
-        Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§7The config §aloaded §7in §b" + amount + " §7cycles§8.");
+
+        Bukkit.getConsoleSender().sendMessage("§7[CreeperRecover] onLoad complete. ConfigManager null? "
+                + (configManager == null) + ", Config loaded? " + configLoaded);
     }
 
     @Override
     public void onEnable() {
         this.explosionManager = new ExplosionManager();
         this.updateChecker = new UpdateChecker(98836);
+
+        // Check if configManager is properly initialized
+        if (this.configManager == null) {
+            Bukkit.getConsoleSender()
+                    .sendMessage("§c[CreeperRecover] ConfigManager is null! Plugin initialization failed.");
+            this.setEnabled(false);
+            return;
+        }
+
         if (this.configManager.bStats()) {
             int pluginId = 14155;
             Metrics metrics = new Metrics(this, pluginId);
             metrics.addCustomChart(new SingleLineChart("blocksRecovered", () -> this.pluginStats.blocksRecovered()));
-            metrics.addCustomChart(new SingleLineChart("explosionsRecovered", () -> this.pluginStats.explosionsRecovered()));
+            metrics.addCustomChart(
+                    new SingleLineChart("explosionsRecovered", () -> this.pluginStats.explosionsRecovered()));
         }
         if (!this.configManager.ignoreUpdates()) {
             this.updateChecker.isLatestVersion(version, aBoolean -> {
                 if (!aBoolean) {
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§8--------------------------------------");
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + " ");
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§7The plugin §bCreeperRecover §7has an §aupdate§8.");
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§7Current Version§8: §3" + getDescription().getVersion() + " §7Latest Version§8: §a" + this.updateChecker.latestVersion());
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + " ");
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§cThe older version may contain bugs that could lead to item loss§8.");
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + " ");
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§8--------------------------------------");
+                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX)
+                            + "§8--------------------------------------");
+                    Bukkit.getConsoleSender()
+                            .sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + " ");
+                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX)
+                            + "§7The plugin §bCreeperRecover §7has an §aupdate§8.");
+                    Bukkit.getConsoleSender()
+                            .sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX)
+                                    + "§7Current Version§8: §3" + getDescription().getVersion()
+                                    + " §7Latest Version§8: §a" + this.updateChecker.latestVersion());
+                    Bukkit.getConsoleSender()
+                            .sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + " ");
+                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX)
+                            + "§cThe older version may contain bugs that could lead to item loss§8.");
+                    Bukkit.getConsoleSender()
+                            .sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + " ");
+                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX)
+                            + "§8--------------------------------------");
                 } else {
-                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§7The §bCreeperRecover §7plugin is §aup to date§8.");
+                    Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX)
+                            + "§7The §bCreeperRecover §7plugin is §aup to date§8.");
                 }
             });
         }
@@ -138,13 +198,24 @@ public abstract class CreeperPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        int recovered = this.explosionManager.recoverBlocks(Integer.MAX_VALUE);
-        Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§7The plugin recovered §b" + recovered + " §7blocks before the server §cstops§8.");
+        if (this.explosionManager != null) {
+            int recovered = this.explosionManager.recoverBlocks(Integer.MAX_VALUE);
+            if (this.messageManager != null) {
+                Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX)
+                        + "§7The plugin recovered §b" + recovered + " §7blocks before the server §cstops§8.");
+            } else {
+                Bukkit.getConsoleSender().sendMessage("§7[CreeperRecover] Plugin recovered §b" + recovered
+                        + " §7blocks before the server §cstops§8.");
+            }
+        }
 
-        this.pluginStats.save();
+        if (this.pluginStats != null) {
+            this.pluginStats.save();
+        }
     }
 
-    private void registerCommand(String name, String description, @NotNull Class<? extends CommandExecutor> commandClass) {
+    private void registerCommand(String name, String description,
+            @NotNull Class<? extends CommandExecutor> commandClass) {
         try {
             var constructor = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
             constructor.setAccessible(true);
@@ -163,7 +234,8 @@ public abstract class CreeperPlugin extends JavaPlugin {
                 pluginCommand.setTabCompleter((TabCompleter) command);
             }
         } catch (Throwable throwable) {
-            Bukkit.getConsoleSender().sendMessage(messageManager.getMessage(MessageManager.Message.PREFIX) + "§cFailed to register command§8!");
+            Bukkit.getConsoleSender().sendMessage(
+                    messageManager.getMessage(MessageManager.Message.PREFIX) + "§cFailed to register command§8!");
             throwable.printStackTrace();
         }
     }

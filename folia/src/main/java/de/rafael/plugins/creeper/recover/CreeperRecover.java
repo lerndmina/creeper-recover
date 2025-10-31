@@ -59,8 +59,14 @@ public class CreeperRecover extends CreeperPlugin {
     public void onEnable() {
         super.onEnable();
 
+        // Check if plugin is still enabled after super.onEnable()
+        if (!this.isEnabled()) {
+            return;
+        }
+
         // Tasks
-        Bukkit.getAsyncScheduler().runAtFixedRate(this, scheduledTask -> this.pluginStats.tick(), 0, 5, TimeUnit.MINUTES);
+        Bukkit.getAsyncScheduler().runAtFixedRate(this, scheduledTask -> this.pluginStats.tick(), 0, 5,
+                TimeUnit.MINUTES);
     }
 
 }
