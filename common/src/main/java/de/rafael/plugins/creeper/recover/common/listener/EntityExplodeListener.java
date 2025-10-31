@@ -41,6 +41,7 @@ package de.rafael.plugins.creeper.recover.common.listener;
 import de.rafael.plugins.creeper.recover.common.CreeperPlugin;
 import de.rafael.plugins.creeper.recover.common.classes.Explosion;
 import de.rafael.plugins.creeper.recover.common.classes.list.BlockList;
+import de.rafael.plugins.creeper.recover.common.integration.WorldGuardIntegration;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
@@ -53,6 +54,16 @@ public class EntityExplodeListener implements Listener {
     public void on(EntityExplodeEvent event) {
         if (!CreeperPlugin.instance().configManager().enabled())
             return;
+
+        // Check WorldGuard regions first for performance (early exit)
+        if (CreeperPlugin.instance().configManager().worldguardIntegration() &&
+                WorldGuardIntegration.isEnabled() &&
+                WorldGuardIntegration.isRecoveryDisabled(event.getLocation())) {
+            CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                    "Explosion at %s skipped due to WorldGuard 'creeper-recover-disabled' flag",
+                    event.getLocation().toString()));
+            return;
+        }
 
         if (CreeperPlugin.instance().configManager().usePlugin(event)) {
             var blocks = new BlockList(event.blockList());

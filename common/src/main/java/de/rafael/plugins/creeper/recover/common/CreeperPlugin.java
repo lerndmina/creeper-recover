@@ -145,6 +145,9 @@ public abstract class CreeperPlugin extends JavaPlugin {
         this.explosionManager = new ExplosionManager();
         this.updateChecker = new UpdateChecker(98836);
 
+        // Initialize WorldGuard integration
+        de.rafael.plugins.creeper.recover.common.integration.WorldGuardIntegration.initialize();
+
         // Check if configManager is properly initialized
         if (this.configManager == null) {
             Bukkit.getConsoleSender()

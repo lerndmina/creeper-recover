@@ -74,6 +74,7 @@ public class ConfigManager {
     private boolean bStats = true;
     private boolean ignoreUpdates = false;
     private boolean debugEnabled = false;
+    private boolean worldguardIntegration = true;
 
     private List<JsonObject> targetList;
 
@@ -149,6 +150,17 @@ public class ConfigManager {
             return false;
         } else {
             this.debugEnabled = jsonConfiguration.jsonObject().getAsJsonObject("plugin").get("debugEnabled")
+                    .getAsBoolean();
+        }
+        if (!jsonConfiguration.jsonObject().getAsJsonObject("plugin").has("worldguardIntegration")) {
+            jsonConfiguration.jsonObject().getAsJsonObject("plugin").addProperty("worldguardIntegration",
+                    this.worldguardIntegration);
+            jsonConfiguration.saveConfig();
+
+            return false;
+        } else {
+            this.worldguardIntegration = jsonConfiguration.jsonObject().getAsJsonObject("plugin")
+                    .get("worldguardIntegration")
                     .getAsBoolean();
         }
 
