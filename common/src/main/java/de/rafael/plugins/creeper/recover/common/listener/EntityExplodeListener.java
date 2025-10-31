@@ -55,12 +55,30 @@ public class EntityExplodeListener implements Listener {
         if (!CreeperPlugin.instance().configManager().enabled())
             return;
 
-        // Check WorldGuard regions first for performance (early exit)
+        // ALWAYS remove protected blocks from explosion - they are ALWAYS protected
+        // regardless of WorldGuard
+        int protectedRemoved = 0;
+        var iterator = event.blockList().iterator();
+        while (iterator.hasNext()) {
+            var block = iterator.next();
+            if (CreeperPlugin.instance().configManager().isProtectedBlock(block.getType())) {
+                iterator.remove();
+                protectedRemoved++;
+            }
+        }
+
+        if (protectedRemoved > 0) {
+            CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                    "Protected %d blocks from explosion destruction (always protected)", protectedRemoved));
+        }
+
+        // Check WorldGuard regions for recovery system (after protected blocks are
+        // handled)
         if (CreeperPlugin.instance().configManager().worldguardIntegration() &&
                 WorldGuardIntegration.isEnabled() &&
                 WorldGuardIntegration.isRecoveryDisabled(event.getLocation())) {
             CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
-                    "Explosion at %s skipped due to WorldGuard 'creeper-recover-disabled' flag",
+                    "Explosion recovery at %s skipped due to WorldGuard 'creeper-recover-disabled' flag",
                     event.getLocation().toString()));
             return;
         }
@@ -78,34 +96,14 @@ public class EntityExplodeListener implements Listener {
             event.setYield(100);
             int originalBlockCount = blocks.blocks().size();
 
-            // Remove protected blocks from explosion entirely - they should never be
-            // destroyed
-            int protectedRemoved = 0;
-            var iterator = event.blockList().iterator();
-            while (iterator.hasNext()) {
-                var block = iterator.next();
-                if (CreeperPlugin.instance().configManager().isProtectedBlock(block.getType())) {
-                    iterator.remove();
-                    protectedRemoved++;
-                }
-            }
-
-            if (protectedRemoved > 0) {
-                CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
-                        "Protected %d blocks from explosion destruction", protectedRemoved));
-            }
-
-            // Refresh blocks list after protected block removal
-            blocks = new BlockList(event.blockList());
-
             // Remove blacklisted blocks from recovery (they get destroyed but won't be
             // restored)
             blocks.removeIf(
                     block -> CreeperPlugin.instance().configManager().blockBlacklist().contains(block.getType()));
             int filteredBlockCount = blocks.blocks().size();
 
-            if (originalBlockCount != (filteredBlockCount + protectedRemoved)) {
-                int blacklistedRemoved = originalBlockCount - filteredBlockCount - protectedRemoved;
+            if (originalBlockCount != filteredBlockCount) {
+                int blacklistedRemoved = originalBlockCount - filteredBlockCount;
                 CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
                         "Filtered %d blacklisted blocks, %d blocks remaining for recovery",
                         blacklistedRemoved,
