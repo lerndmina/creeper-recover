@@ -123,7 +123,8 @@ public class WorldGuardIntegration {
    * Logic:
    * - creeper-recover: allow → Always recover (overrides TNT)
    * - creeper-recover: deny → Never recover
-   * - creeper-recover: unset → Check TNT flag (if TNT allow in non-global region, skip recovery)
+   * - creeper-recover: unset → Check TNT flag (if TNT allow in non-global region,
+   * skip recovery)
    * 
    * @param location The location to check
    * @return true if recovery should be skipped, false if recovery should happen
