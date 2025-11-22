@@ -92,7 +92,7 @@ public class WorldGuardIntegration {
 
       Class<?> stateFlagClass = Class.forName("com.sk89q.worldguard.protection.flags.StateFlag");
       Object stateFlag = stateFlagClass.getConstructor(String.class, boolean.class)
-          .newInstance("creeper-recover-disabled", false);
+          .newInstance("creeper-recover", false);
 
       creeperRecoverDisabledFlag = stateFlag;
 
@@ -101,7 +101,7 @@ public class WorldGuardIntegration {
           .invoke(flagRegistry, stateFlag);
 
       Bukkit.getConsoleSender()
-          .sendMessage("§7[CreeperRecover] Custom WorldGuard flag 'creeper-recover-disabled' registered successfully!");
+          .sendMessage("§7[CreeperRecover] Custom WorldGuard flag 'creeper-recover' registered successfully!");
 
     } catch (Exception e) {
       Bukkit.getConsoleSender().sendMessage("§c[CreeperRecover] Failed to register WorldGuard flag: " + e.getMessage());
@@ -119,13 +119,16 @@ public class WorldGuardIntegration {
   }
 
   /**
-   * Check if explosion recovery should be disabled at the given location
-   * Uses reflection to safely interact with WorldGuard classes
+   * Check if explosion recovery should be skipped at the given location
+   * Logic:
+   * - creeper-recover: allow → Always recover (overrides TNT)
+   * - creeper-recover: deny → Never recover
+   * - creeper-recover: unset → Check TNT flag (if TNT allow in non-global region, skip recovery)
    * 
    * @param location The location to check
-   * @return true if recovery should be disabled, false otherwise
+   * @return true if recovery should be skipped, false if recovery should happen
    */
-  public static boolean isRecoveryDisabled(Location location) {
+  public static boolean shouldSkipRecovery(Location location) {
     if (!worldGuardEnabled || creeperRecoverDisabledFlag == null) {
       return false; // No WorldGuard or flag registration failed = no restriction
     }
@@ -161,20 +164,23 @@ public class WorldGuardIntegration {
       Object applicableRegions = regionManager.getClass().getMethod("getApplicableRegions", vectorClass)
           .invoke(regionManager, vector);
 
-      // Check flag value
-      Class<?> stateFlagClass = Class.forName("com.sk89q.worldguard.protection.flags.StateFlag$State");
-      Object flagValue = applicableRegions.getClass()
+      // Check creeper-recover flag value
+      Object creeperRecoverFlagValue = applicableRegions.getClass()
           .getMethod("queryValue", Object.class, Class.forName("com.sk89q.worldguard.protection.flags.Flag"))
           .invoke(applicableRegions, null, creeperRecoverDisabledFlag);
 
-      // StateFlag.State.ALLOW = false (recovery enabled), StateFlag.State.DENY = true
-      // (recovery disabled)
-      if (flagValue != null) {
-        String stateName = flagValue.toString();
-        return "DENY".equals(stateName);
+      // If creeper-recover flag is set, respect it
+      if (creeperRecoverFlagValue != null) {
+        String stateName = creeperRecoverFlagValue.toString();
+        if ("ALLOW".equals(stateName)) {
+          return false; // Explicitly enabled recovery
+        } else if ("DENY".equals(stateName)) {
+          return true; // Explicitly disabled recovery
+        }
       }
 
-      return false; // Flag not set = recovery enabled (default)
+      // Flag not set - check TNT flag
+      return isTntExplicitlyAllowedInternal(location);
 
     } catch (Exception e) {
       // Log error but don't disable WorldGuard entirely
@@ -184,13 +190,13 @@ public class WorldGuardIntegration {
   }
 
   /**
-   * Check if TNT is explicitly allowed in a non-global region
+   * Internal method to check if TNT is explicitly allowed in a non-global region
    * If TNT is explicitly set to ALLOW in a region (not __global__), skip recovery
    * 
    * @param location The location to check
    * @return true if TNT is explicitly allowed in a non-global region
    */
-  public static boolean isTntExplicitlyAllowed(Location location) {
+  private static boolean isTntExplicitlyAllowedInternal(Location location) {
     if (!worldGuardEnabled) {
       return false; // No WorldGuard = no TNT flag restriction
     }
@@ -233,10 +239,10 @@ public class WorldGuardIntegration {
 
       // Check if any non-global region explicitly sets TNT to ALLOW
       Class<?> protectedRegionClass = Class.forName("com.sk89q.worldguard.protection.regions.ProtectedRegion");
-      
+
       // Get regions from applicableRegions
       Object regionsIterable = applicableRegions.getClass().getMethod("getRegions").invoke(applicableRegions);
-      
+
       for (Object region : (Iterable<?>) regionsIterable) {
         // Skip __global__ region
         String regionId = (String) protectedRegionClass.getMethod("getId").invoke(region);

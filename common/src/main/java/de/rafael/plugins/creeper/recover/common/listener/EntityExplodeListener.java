@@ -84,24 +84,12 @@ public class EntityExplodeListener implements Listener {
             return;
         }
 
-        // Check WorldGuard regions for recovery system (after protected blocks are
-        // handled)
+        // Check WorldGuard regions for recovery system (checks both creeper-recover and TNT flags)
         if (CreeperPlugin.instance().configManager().worldguardIntegration() &&
                 WorldGuardIntegration.isEnabled() &&
-                WorldGuardIntegration.isRecoveryDisabled(event.getLocation())) {
+                WorldGuardIntegration.shouldSkipRecovery(event.getLocation())) {
             CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
-                    "Explosion recovery at %s skipped due to WorldGuard 'creeper-recover-disabled' flag",
-                    event.getLocation().toString()));
-            return;
-        }
-
-        // Check if TNT is explicitly allowed in a non-global WorldGuard region
-        if (CreeperPlugin.instance().configManager().worldguardIntegration() &&
-                CreeperPlugin.instance().configManager().worldguardTntCheck() &&
-                WorldGuardIntegration.isEnabled() &&
-                WorldGuardIntegration.isTntExplicitlyAllowed(event.getLocation())) {
-            CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
-                    "Explosion recovery at %s skipped - TNT is explicitly allowed in WorldGuard region",
+                    "Explosion recovery at %s skipped due to WorldGuard region flags",
                     event.getLocation().toString()));
             return;
         }
