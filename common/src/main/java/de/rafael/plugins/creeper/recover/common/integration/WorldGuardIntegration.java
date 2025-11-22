@@ -183,4 +183,86 @@ public class WorldGuardIntegration {
     }
   }
 
+  /**
+   * Check if TNT is explicitly allowed in a non-global region
+   * If TNT is explicitly set to ALLOW in a region (not __global__), skip recovery
+   * 
+   * @param location The location to check
+   * @return true if TNT is explicitly allowed in a non-global region
+   */
+  public static boolean isTntExplicitlyAllowed(Location location) {
+    if (!worldGuardEnabled) {
+      return false; // No WorldGuard = no TNT flag restriction
+    }
+
+    try {
+      // Get WorldGuard platform
+      Class<?> worldGuardClass = Class.forName("com.sk89q.worldguard.WorldGuard");
+      Object worldGuardInstance = worldGuardClass.getMethod("getInstance").invoke(null);
+      Object platform = worldGuardClass.getMethod("getPlatform").invoke(worldGuardInstance);
+
+      // Get region container
+      Object regionContainer = platform.getClass().getMethod("getRegionContainer").invoke(platform);
+
+      // Convert Bukkit world to WorldGuard world
+      Class<?> bukkitAdapterClass = Class.forName("com.sk89q.worldguard.bukkit.BukkitAdapter");
+      Object world = bukkitAdapterClass.getMethod("adapt", org.bukkit.World.class).invoke(null,
+          location.getWorld());
+
+      // Get region manager for this world
+      Object regionManager = regionContainer.getClass()
+          .getMethod("get", Class.forName("com.sk89q.worldedit.world.World"))
+          .invoke(regionContainer, world);
+
+      if (regionManager == null) {
+        return false; // No region manager for this world
+      }
+
+      // Convert location to WorldGuard location
+      Class<?> vectorClass = Class.forName("com.sk89q.worldedit.math.BlockVector3");
+      Object vector = vectorClass.getMethod("at", double.class, double.class, double.class)
+          .invoke(null, location.getX(), location.getY(), location.getZ());
+
+      // Get applicable regions
+      Object applicableRegions = regionManager.getClass().getMethod("getApplicableRegions", vectorClass)
+          .invoke(regionManager, vector);
+
+      // Get the TNT flag from Flags class
+      Class<?> flagsClass = Class.forName("com.sk89q.worldguard.protection.flags.Flags");
+      Object tntFlag = flagsClass.getField("TNT").get(null);
+
+      // Check if any non-global region explicitly sets TNT to ALLOW
+      Class<?> protectedRegionClass = Class.forName("com.sk89q.worldguard.protection.regions.ProtectedRegion");
+      
+      // Get regions from applicableRegions
+      Object regionsIterable = applicableRegions.getClass().getMethod("getRegions").invoke(applicableRegions);
+      
+      for (Object region : (Iterable<?>) regionsIterable) {
+        // Skip __global__ region
+        String regionId = (String) protectedRegionClass.getMethod("getId").invoke(region);
+        if ("__global__".equals(regionId)) {
+          continue;
+        }
+
+        // Check if this region has TNT flag set
+        Object flagValue = protectedRegionClass.getMethod("getFlag",
+            Class.forName("com.sk89q.worldguard.protection.flags.Flag"))
+            .invoke(region, tntFlag);
+
+        // If TNT flag is explicitly set to ALLOW in this region
+        if (flagValue != null && "ALLOW".equals(flagValue.toString())) {
+          return true; // TNT is explicitly allowed in a non-global region
+        }
+      }
+
+      return false; // TNT not explicitly allowed in any non-global region
+
+    } catch (Exception e) {
+      // Log error but don't disable WorldGuard entirely
+      Bukkit.getConsoleSender()
+          .sendMessage("§c[CreeperRecover] Error checking WorldGuard TNT flag: " + e.getMessage());
+      return false; // Default to allowing recovery on error
+    }
+  }
+
 }

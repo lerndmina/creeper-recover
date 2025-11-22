@@ -55,8 +55,12 @@ public class EntityExplodeListener implements Listener {
         if (!CreeperPlugin.instance().configManager().enabled())
             return;
 
+        // Check if world is blacklisted (but still protect blocks)
+        String worldName = event.getLocation().getWorld().getName();
+        boolean worldBlacklisted = CreeperPlugin.instance().configManager().isWorldBlacklisted(worldName);
+
         // ALWAYS remove protected blocks from explosion - they are ALWAYS protected
-        // regardless of WorldGuard
+        // regardless of world blacklist or WorldGuard
         int protectedRemoved = 0;
         var iterator = event.blockList().iterator();
         while (iterator.hasNext()) {
@@ -72,6 +76,14 @@ public class EntityExplodeListener implements Listener {
                     "Protected %d blocks from explosion destruction (always protected)", protectedRemoved));
         }
 
+        // Check if world is blacklisted - skip recovery but protected blocks are still
+        // protected
+        if (worldBlacklisted) {
+            CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                    "Explosion recovery in world '%s' skipped - world is blacklisted", worldName));
+            return;
+        }
+
         // Check WorldGuard regions for recovery system (after protected blocks are
         // handled)
         if (CreeperPlugin.instance().configManager().worldguardIntegration() &&
@@ -79,6 +91,17 @@ public class EntityExplodeListener implements Listener {
                 WorldGuardIntegration.isRecoveryDisabled(event.getLocation())) {
             CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
                     "Explosion recovery at %s skipped due to WorldGuard 'creeper-recover-disabled' flag",
+                    event.getLocation().toString()));
+            return;
+        }
+
+        // Check if TNT is explicitly allowed in a non-global WorldGuard region
+        if (CreeperPlugin.instance().configManager().worldguardIntegration() &&
+                CreeperPlugin.instance().configManager().worldguardTntCheck() &&
+                WorldGuardIntegration.isEnabled() &&
+                WorldGuardIntegration.isTntExplicitlyAllowed(event.getLocation())) {
+            CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
+                    "Explosion recovery at %s skipped - TNT is explicitly allowed in WorldGuard region",
                     event.getLocation().toString()));
             return;
         }

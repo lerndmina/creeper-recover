@@ -69,12 +69,14 @@ public class ConfigManager {
     private Sound blockRecoverSound;
     private List<Material> blockBlacklist;
     private List<Material> protectedBlocks;
+    private List<String> worldBlacklist;
 
     private boolean enabled = true;
     private boolean bStats = true;
     private boolean ignoreUpdates = false;
     private boolean debugEnabled = false;
     private boolean worldguardIntegration = true;
+    private boolean worldguardTntCheck = true;
 
     private List<JsonObject> targetList;
 
@@ -82,10 +84,15 @@ public class ConfigManager {
 
         this.blockBlacklist = new ArrayList<>();
         this.protectedBlocks = new ArrayList<>();
+        this.worldBlacklist = new ArrayList<>();
 
         // Default protected blocks - player heads lose their skin when restored
         this.protectedBlocks.add(Material.PLAYER_HEAD);
         this.protectedBlocks.add(Material.PLAYER_WALL_HEAD);
+
+        // Default blacklisted worlds - don't recover explosions in nether/end
+        this.worldBlacklist.add("world_nether");
+        this.worldBlacklist.add("world_the_end");
 
         try {
             this.blockRecoverSound = Sound.valueOf("BLOCK_ROOTED_DIRT_PLACE");
@@ -217,6 +224,19 @@ public class ConfigManager {
             this.protectedBlocks = GSON.fromJson(
                     jsonConfiguration.jsonObject().getAsJsonObject("recover").getAsJsonArray("protectedBlocks"),
                     new TypeToken<List<Material>>() {
+                    }.getType());
+        }
+        if (!jsonConfiguration.jsonObject().getAsJsonObject("recover").has("worldBlacklist")) {
+            jsonConfiguration.jsonObject().getAsJsonObject("recover").add("worldBlacklist",
+                    GSON.toJsonTree(this.worldBlacklist, new TypeToken<List<String>>() {
+                    }.getType()));
+            jsonConfiguration.saveConfig();
+
+            return false;
+        } else {
+            this.worldBlacklist = GSON.fromJson(
+                    jsonConfiguration.jsonObject().getAsJsonObject("recover").getAsJsonArray("worldBlacklist"),
+                    new TypeToken<List<String>>() {
                     }.getType());
         }
 
@@ -517,6 +537,25 @@ public class ConfigManager {
      */
     public List<Material> getProtectedBlocks() {
         return new ArrayList<>(this.protectedBlocks);
+    }
+
+    /**
+     * Checks if a world is in the blacklist
+     * 
+     * @param worldName The name of the world to check
+     * @return true if the world is blacklisted
+     */
+    public boolean isWorldBlacklisted(String worldName) {
+        return this.worldBlacklist.contains(worldName);
+    }
+
+    /**
+     * Gets a copy of the world blacklist
+     * 
+     * @return A copy of the world blacklist
+     */
+    public List<String> getWorldBlacklist() {
+        return new ArrayList<>(this.worldBlacklist);
     }
 
 }
