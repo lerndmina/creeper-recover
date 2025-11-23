@@ -1,3 +1,7 @@
+# The fork
+This is a fork for my own purposes for use on my server. Feel free to use any part of this fork for anything.
+
+
 # CreeperRecover
 Recovers all destroyed blocks by Creeper or other Entities
 
