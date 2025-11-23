@@ -42,7 +42,6 @@ repositories {
     mavenCentral()
 
     maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
-    maven("https://maven.enginehub.org/repo/")
 }
 
 dependencies {
@@ -51,7 +50,6 @@ dependencies {
     implementation("org.jetbrains:annotations:" + findProperty("jetbrains_annotations_version"))
 
     compileOnly("org.spigotmc:spigot-api:" + findProperty("spigot_version"))
-    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.9")
 
     compileOnly("org.projectlombok:lombok:" + findProperty("lombok_version"))
     annotationProcessor("org.projectlombok:lombok:" + findProperty("lombok_version"))

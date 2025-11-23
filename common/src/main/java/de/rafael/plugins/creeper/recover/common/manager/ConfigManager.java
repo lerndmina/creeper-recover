@@ -75,9 +75,8 @@ public class ConfigManager {
     private boolean bStats = true;
     private boolean ignoreUpdates = false;
     private boolean debugEnabled = false;
-    private boolean worldguardIntegration = true;
-    private boolean worldguardTntCheck = true;
 
+    private List<EntityType> explosionBlacklist;
     private List<JsonObject> targetList;
 
     public boolean load() {
@@ -85,6 +84,7 @@ public class ConfigManager {
         this.blockBlacklist = new ArrayList<>();
         this.protectedBlocks = new ArrayList<>();
         this.worldBlacklist = new ArrayList<>();
+        this.explosionBlacklist = new ArrayList<>();
 
         // Default protected blocks - player heads lose their skin when restored
         this.protectedBlocks.add(Material.PLAYER_HEAD);
@@ -93,6 +93,9 @@ public class ConfigManager {
         // Default blacklisted worlds - don't recover explosions in nether/end
         this.worldBlacklist.add("world_nether");
         this.worldBlacklist.add("world_the_end");
+        
+        // Default explosion blacklist - don't recover TNT explosions
+        this.explosionBlacklist.add(EntityType.PRIMED_TNT);
 
         try {
             this.blockRecoverSound = Sound.valueOf("BLOCK_ROOTED_DIRT_PLACE");
@@ -157,17 +160,6 @@ public class ConfigManager {
             return false;
         } else {
             this.debugEnabled = jsonConfiguration.jsonObject().getAsJsonObject("plugin").get("debugEnabled")
-                    .getAsBoolean();
-        }
-        if (!jsonConfiguration.jsonObject().getAsJsonObject("plugin").has("worldguardIntegration")) {
-            jsonConfiguration.jsonObject().getAsJsonObject("plugin").addProperty("worldguardIntegration",
-                    this.worldguardIntegration);
-            jsonConfiguration.saveConfig();
-
-            return false;
-        } else {
-            this.worldguardIntegration = jsonConfiguration.jsonObject().getAsJsonObject("plugin")
-                    .get("worldguardIntegration")
                     .getAsBoolean();
         }
 
@@ -235,9 +227,34 @@ public class ConfigManager {
             return false;
         } else {
             this.worldBlacklist = GSON.fromJson(
-                    jsonConfiguration.jsonObject().getAsJsonObject("recover").getAsJsonArray("worldBlacklist"),
+                    jsonConfiguration.jsonObject().getAsJsonObject("recover").get("worldBlacklist"),
                     new TypeToken<List<String>>() {
                     }.getType());
+        }
+        if (!jsonConfiguration.jsonObject().getAsJsonObject("recover").has("explosionBlacklist")) {
+            JsonArray explosionBlacklistArray = new JsonArray();
+            for (EntityType type : this.explosionBlacklist) {
+                explosionBlacklistArray.add(type.name());
+            }
+            jsonConfiguration.jsonObject().getAsJsonObject("recover").add("explosionBlacklist",
+                    explosionBlacklistArray);
+            jsonConfiguration.saveConfig();
+
+            return false;
+        } else {
+            List<String> explosionTypeNames = GSON.fromJson(
+                    jsonConfiguration.jsonObject().getAsJsonObject("recover").get("explosionBlacklist"),
+                    new TypeToken<List<String>>() {
+                    }.getType());
+            this.explosionBlacklist.clear();
+            for (String typeName : explosionTypeNames) {
+                try {
+                    this.explosionBlacklist.add(EntityType.valueOf(typeName));
+                } catch (IllegalArgumentException e) {
+                    Bukkit.getConsoleSender().sendMessage(
+                            "§c[CreeperRecover] Invalid explosion type in blacklist: " + typeName);
+                }
+            }
         }
 
         // Target
@@ -556,6 +573,25 @@ public class ConfigManager {
      */
     public List<String> getWorldBlacklist() {
         return new ArrayList<>(this.worldBlacklist);
+    }
+
+    /**
+     * Checks if an explosion type is in the blacklist
+     * 
+     * @param entityType The entity type to check
+     * @return true if the explosion type is blacklisted
+     */
+    public boolean isExplosionBlacklisted(EntityType entityType) {
+        return this.explosionBlacklist.contains(entityType);
+    }
+
+    /**
+     * Gets a copy of the explosion blacklist
+     * 
+     * @return A copy of the explosion blacklist
+     */
+    public List<EntityType> getExplosionBlacklist() {
+        return new ArrayList<>(this.explosionBlacklist);
     }
 
 }

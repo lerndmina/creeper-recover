@@ -138,15 +138,10 @@ public abstract class CreeperPlugin extends JavaPlugin {
 
         Bukkit.getConsoleSender().sendMessage("§7[CreeperRecover] onLoad complete. ConfigManager null? "
                 + (configManager == null) + ", Config loaded? " + configLoaded);
-    }
-
-    @Override
+    }    @Override
     public void onEnable() {
         this.explosionManager = new ExplosionManager();
         this.updateChecker = new UpdateChecker(98836);
-
-        // Initialize WorldGuard integration
-        de.rafael.plugins.creeper.recover.common.integration.WorldGuardIntegration.initialize();
 
         // Check if configManager is properly initialized
         if (this.configManager == null) {

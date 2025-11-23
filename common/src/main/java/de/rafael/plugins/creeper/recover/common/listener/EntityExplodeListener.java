@@ -41,7 +41,6 @@ package de.rafael.plugins.creeper.recover.common.listener;
 import de.rafael.plugins.creeper.recover.common.CreeperPlugin;
 import de.rafael.plugins.creeper.recover.common.classes.Explosion;
 import de.rafael.plugins.creeper.recover.common.classes.list.BlockList;
-import de.rafael.plugins.creeper.recover.common.integration.WorldGuardIntegration;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
@@ -76,22 +75,18 @@ public class EntityExplodeListener implements Listener {
                     "Protected %d blocks from explosion destruction (always protected)", protectedRemoved));
         }
 
-        // Check if world is blacklisted - skip recovery but protected blocks are still
-        // protected
+        // Check if world is blacklisted - skip recovery but protected blocks are still protected
         if (worldBlacklisted) {
             CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
                     "Explosion recovery in world '%s' skipped - world is blacklisted", worldName));
             return;
         }
 
-        // Check WorldGuard regions for recovery system (checks both creeper-recover and
-        // TNT flags)
-        if (CreeperPlugin.instance().configManager().worldguardIntegration() &&
-                WorldGuardIntegration.isEnabled() &&
-                WorldGuardIntegration.shouldSkipRecovery(event.getLocation())) {
+        // Check if this explosion type is blacklisted
+        if (CreeperPlugin.instance().configManager().isExplosionBlacklisted(event.getEntityType())) {
             CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
-                    "Explosion recovery at %s skipped due to WorldGuard region flags",
-                    event.getLocation().toString()));
+                    "Explosion recovery skipped - entity type %s is blacklisted",
+                    event.getEntityType().name()));
             return;
         }
 
