@@ -138,7 +138,9 @@ public abstract class CreeperPlugin extends JavaPlugin {
 
         Bukkit.getConsoleSender().sendMessage("§7[CreeperRecover] onLoad complete. ConfigManager null? "
                 + (configManager == null) + ", Config loaded? " + configLoaded);
-    }    @Override
+    }
+
+    @Override
     public void onEnable() {
         this.explosionManager = new ExplosionManager();
         this.updateChecker = new UpdateChecker(98836);

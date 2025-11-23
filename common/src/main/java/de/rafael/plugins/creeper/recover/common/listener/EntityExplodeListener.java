@@ -75,7 +75,8 @@ public class EntityExplodeListener implements Listener {
                     "Protected %d blocks from explosion destruction (always protected)", protectedRemoved));
         }
 
-        // Check if world is blacklisted - skip recovery but protected blocks are still protected
+        // Check if world is blacklisted - skip recovery but protected blocks are still
+        // protected
         if (worldBlacklisted) {
             CreeperPlugin.instance().configManager().sendDebugMessage(String.format(
                     "Explosion recovery in world '%s' skipped - world is blacklisted", worldName));

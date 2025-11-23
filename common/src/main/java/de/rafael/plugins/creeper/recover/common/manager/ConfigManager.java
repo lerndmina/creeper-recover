@@ -93,7 +93,7 @@ public class ConfigManager {
         // Default blacklisted worlds - don't recover explosions in nether/end
         this.worldBlacklist.add("world_nether");
         this.worldBlacklist.add("world_the_end");
-        
+
         // Default explosion blacklist - don't recover TNT explosions
         this.explosionBlacklist.add(EntityType.PRIMED_TNT);
 
