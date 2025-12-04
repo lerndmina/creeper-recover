@@ -75,6 +75,7 @@ public class ConfigManager {
     private boolean bStats = true;
     private boolean ignoreUpdates = false;
     private boolean debugEnabled = false;
+    private boolean worldguardTntCheck = false;
 
     private List<EntityType> explosionBlacklist;
     private List<JsonObject> targetList;
@@ -95,7 +96,30 @@ public class ConfigManager {
         this.worldBlacklist.add("world_the_end");
 
         // Default explosion blacklist - don't recover TNT explosions
-        this.explosionBlacklist.add(EntityType.PRIMED_TNT);
+        // In 1.21+ PRIMED_TNT was renamed to TNT
+        try {
+            this.explosionBlacklist.add(EntityType.valueOf("TNT"));
+        } catch (IllegalArgumentException e1) {
+            try {
+                this.explosionBlacklist.add(EntityType.valueOf("PRIMED_TNT"));
+            } catch (IllegalArgumentException e2) {
+                // Neither exists, skip
+            }
+        }
+
+        // Default explosion blacklist - wind charges don't actually destroy most blocks
+        // They only break specific fragile blocks (decorated pots, buttons, etc.)
+        // so we ignore them to prevent false regeneration
+        try {
+            this.explosionBlacklist.add(EntityType.valueOf("WIND_CHARGE"));
+        } catch (IllegalArgumentException ignored) {
+            // WIND_CHARGE doesn't exist in older versions
+        }
+        try {
+            this.explosionBlacklist.add(EntityType.valueOf("BREEZE_WIND_CHARGE"));
+        } catch (IllegalArgumentException ignored) {
+            // BREEZE_WIND_CHARGE doesn't exist in older versions
+        }
 
         try {
             this.blockRecoverSound = Sound.valueOf("BLOCK_ROOTED_DIRT_PLACE");
